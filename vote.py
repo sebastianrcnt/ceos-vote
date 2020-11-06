@@ -1,5 +1,5 @@
 from flask import Flask, json, request, Response, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 
 from tinydb import TinyDB, Query, where
 from cerberus import Validator
@@ -9,7 +9,7 @@ import jwt
 
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r'*': {'origins': '*'}})
 
 db = TinyDB('./db.json')
 
@@ -64,7 +64,7 @@ def verifyUser():
   loginData = request.get_json(force=True)
   if not LoginDataSchemaValidator(loginData):
     return Response(response="올바른 요청 형식이 아닙니다", status=400)
-  
+
   if Users.contains((Query()['email'] == loginData['email']) and (Query()['password'] == loginData['password'])):
     return jwt.encode({'email': loginData['email']}, JWT_SECRET_KEY)
   else:
@@ -89,7 +89,7 @@ def getAllCandidates():
   candidateList = Candidates.all()
   for candidate in candidateList:
     candidate['id'] = candidate.doc_id
-  
+
   return Response(response=json.dumps(candidateList, ensure_ascii=False), mimetype="application/json")
 
 @app.route('/vote')
@@ -104,6 +104,6 @@ def vote():
     return Response(response="해당 id를 가진 후보자가 존재하지 않습니다", status=404)
 
   Candidates.update({'voteCount': targetCandidate['voteCount'] + 1}, doc_ids=[int(id)])
-  return Response(status=200)
+  return Response(response=f"Successfully voted for number {id}({targetCandidate['name']})", status=200)
 
-app.run(debug=True)
+app.run(host="0.0.0.0", port=2020, debug=True)
